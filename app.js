@@ -4,6 +4,7 @@ if(process.env.NODE_ENV!="production"){
 }
 const express=require("express")
 const app=express();
+app.set("trust proxy", 1);
 const mongoose=require("mongoose")
 const path=require("path")
 const methodOverride=require("method-override")
@@ -50,7 +51,7 @@ const store = MongoStore.create({
     touchAfter: 24*3600,
 })
 
-store.on("error",()=>{
+store.on("error",(err)=>{
     console.log("ERROR in MONGO SESSION STORE",err)
 })
 
@@ -98,6 +99,14 @@ app.use((req,res,next)=>{
 //   res.send(registeredUser)
 // })
 
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.use("/listings",listingRouter);
 app.use("/listings/:id/reviews",reviewRouter)
 app.use("/",userRouter)
@@ -110,6 +119,7 @@ app.use((err,req,res,next)=>{
     res.status(statusCode).render("error.ejs",{message})
     // res.status(statusCode).send(message)   
 })
-app.listen(8080,()=>{
-    console.log("server is listening to port 8080")
+const PORT = process.env.PORT || 8080;
+app.listen(PORT,()=>{
+    console.log(`server is listening to port ${PORT}`)
 })
