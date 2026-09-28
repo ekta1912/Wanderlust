@@ -2,6 +2,8 @@ const Listing=require("./models/listing");
 const Review=require("./models/review");
 const ExpressError=require("./utils/ExpressError.js")
 const {listingSchema,reviewSchema}=require("./schema.js")
+const { rateLimit } = require("express-rate-limit");
+const { getRateLimitStore } = require("./utils/redis.js");
 
 
 module.exports.isLoggedIn=(req,res,next)=>{
@@ -60,5 +62,23 @@ module.exports.isReviewAuthor=async(req,res,next)=>{
     }
     next();
 }
+
+module.exports.loginRateLimiter = rateLimit({
+    windowMs: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: getRateLimitStore(),
+    passOnStoreError: true,
+    handler: (req, res, next, options) => {
+        const message = "Too many login attempts. Please try again later.";
+        res.status(429);
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes("application/json"))) {
+            return res.json({ error: message });
+        }
+        req.flash("error", message);
+        res.render("users/login.ejs", { error: message });
+    }
+});
 
 
