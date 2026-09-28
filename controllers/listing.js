@@ -3,8 +3,17 @@ const Listing=require("../models/listing")
 const mbxGeocoding=require("@mapbox/mapbox-sdk/services/geocoding")
 const maptoken = process.env.MAP_TOKEN
 const geocodingClient=mbxGeocoding({accessToken:maptoken})
+const { getCache, setCache, delCache } = require("../utils/redis.js")
+const LISTINGS_CACHE_KEY = "listings:all";
+
 module.exports.index=async(req,res)=>{
+  const cachedListings = await getCache(LISTINGS_CACHE_KEY);
+  if (cachedListings) {
+    return res.render("./listings/index.ejs", { allListings: cachedListings });
+  }
   const allListings= await Listing.find({})
+  const ttl = Number(process.env.LISTINGS_CACHE_TTL_SEC) || 3600;
+  await setCache(LISTINGS_CACHE_KEY, allListings, ttl);
   res.render("./listings/index.ejs",{allListings})
 }
 
@@ -38,6 +47,7 @@ let response= await geocodingClient.forwardGeocode({
   let savedListing=await newListing.save()
   console.log(savedListing)
    await newListing.save()
+   await delCache(LISTINGS_CACHE_KEY);
    req.flash("success","New listing created!");
     res.redirect("/listings")
 }
@@ -65,6 +75,7 @@ if(typeof req.file!=="undefined"){
   await listing.save();
 }
 
+   await delCache(LISTINGS_CACHE_KEY);
    req.flash("success","Listing updated!");
   res.redirect(`/listings/${id}`)
 }
@@ -73,6 +84,7 @@ module.exports.destroyListing=async(req,res)=>{
     let {id}= req.params;
    let deletedListing=await Listing.findByIdAndDelete(id)
    console.log(deletedListing)
+   await delCache(LISTINGS_CACHE_KEY);
    req.flash("success","Listing deleted!");
    res.redirect("/listings")
 }
