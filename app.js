@@ -21,6 +21,8 @@ const User=require("./models/user.js")
 const listingRouter=require("./routes/listing.js");
 const reviewRouter=require("./routes/review.js")
 const userRouter=require("./routes/user.js")
+const bookingRouter=require("./routes/booking.js");
+const assistantRouter=require("./routes/assistant.js");
 
 
 
@@ -67,9 +69,9 @@ const sessionOptions={
         httpOnly: true,
     }
 }
-// app.get("/",(req,res)=>{
-//     res.send("Hi! I m root")
-// })
+app.get("/", (req, res) => {
+    res.redirect("/listings");
+});
 
 
 
@@ -109,6 +111,8 @@ app.get("/health", (req, res) => {
 
 app.use("/listings",listingRouter);
 app.use("/listings/:id/reviews",reviewRouter)
+app.use("/",bookingRouter);
+app.use("/assistant",assistantRouter);
 app.use("/",userRouter)
 app.use((req, res, next) => {
     next(new ExpressError(404, "Page not found"));

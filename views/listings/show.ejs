@@ -29,6 +29,31 @@
     </form>
       </div>
    <% } %>
+    <div class="col-6 offset-3 mb-4 mt-3">
+        <div class="card p-3 shadow-sm border rounded">
+            <h4 class="card-title">Book this place</h4>
+            <p class="text-muted mb-3">&#8377; <%= listing.price ? listing.price.toLocaleString("en-IN") : "0" %> / night</p>
+            <form action="/listings/<%= listing._id %>/bookings" method="POST" class="needs-validation" novalidate>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label for="checkIn" class="form-label">Check-in</label>
+                        <input type="date" name="booking[checkIn]" id="checkIn" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="checkOut" class="form-label">Check-out</label>
+                        <input type="date" name="booking[checkOut]" id="checkOut" class="form-control" required />
+                    </div>
+                </div>
+                <button class="btn btn-danger w-100 py-2">Reserve</button>
+            </form>
+            <div class="text-center mt-3 pt-2 border-top">
+                <a href="/assistant?location=<%= encodeURIComponent(listing.location) %>" class="btn btn-sm btn-outline-secondary w-100">
+                    <i class="fa-solid fa-wand-magic-sparkles text-danger me-1"></i>Ask AI: Attractions & Stays near <%= listing.location %>
+                </a>
+            </div>
+        </div>
+    </div>
+
       <div class="col-8 offset-3 mb-3">
         <% if(currUser) { %> 
           <hr>
@@ -87,3 +112,24 @@
   </div>
 
   <script src="/js/map.js"></script>
+  <script>
+    (() => {
+      const checkIn = document.getElementById("checkIn");
+      const checkOut = document.getElementById("checkOut");
+      if (checkIn && checkOut) {
+        const today = new Date().toISOString().split("T")[0];
+        checkIn.min = today;
+        checkIn.addEventListener("change", () => {
+          if (checkIn.value) {
+            const nextDay = new Date(checkIn.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayStr = nextDay.toISOString().split("T")[0];
+            checkOut.min = nextDayStr;
+            if (checkOut.value && checkOut.value <= checkIn.value) {
+              checkOut.value = nextDayStr;
+            }
+          }
+        });
+      }
+    })();
+  </script>

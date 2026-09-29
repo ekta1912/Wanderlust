@@ -1,0 +1,248 @@
+<% layout("/layouts/boilerplate") %>
+
+<div class="row mt-4 mb-5">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold"><i class="fa-solid fa-wand-magic-sparkles text-danger me-2"></i>AI Travel Assistant</h2>
+            <p class="text-muted">Personalized itinerary planning & local nearby recommendations powered by Gemini Flash</p>
+        </div>
+
+        <!-- Assistant Navigation Tabs -->
+        <ul class="nav nav-pills nav-fill mb-4 shadow-sm p-1 bg-light rounded-pill border" id="assistantTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill <%= initialLocation ? '' : 'active' %>" id="trip-tab" data-bs-toggle="pill" data-bs-target="#trip-content" type="button" role="tab">
+                    <i class="fa-solid fa-route me-1"></i> Trip Planner
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill <%= initialLocation ? 'active' : '' %>" id="nearby-tab" data-bs-toggle="pill" data-bs-target="#nearby-content" type="button" role="tab">
+                    <i class="fa-solid fa-location-dot me-1"></i> Explore Nearby
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="assistantTabsContent">
+            <!-- Tab 1: Trip Planner -->
+            <div class="tab-pane fade <%= initialLocation ? '' : 'show active' %>" id="trip-content" role="tabpanel">
+                <div class="card shadow-sm border p-4">
+                    <h5 class="card-title mb-3 fw-bold"><i class="fa-solid fa-compass text-danger me-2"></i>Generate a Custom Travel Plan</h5>
+                    <form id="tripForm" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="startLocation" class="form-label">Starting / Current Location</label>
+                                <input type="text" class="form-control" id="startLocation" placeholder="e.g. Mumbai, Delhi, New York" required />
+                                <div class="invalid-feedback">Please provide your departure location.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="destination" class="form-label">Destination</label>
+                                <input type="text" class="form-control" id="destination" placeholder="e.g. Goa, Manali, Kyoto" required />
+                                <div class="invalid-feedback">Please provide your destination.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="budget" class="form-label">Approximate Budget</label>
+                                <input type="text" class="form-control" id="budget" placeholder="e.g. ₹15,000, $500, Budget / Luxury" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="days" class="form-label">Number of Days / Duration</label>
+                                <input type="number" class="form-control" id="days" min="1" max="30" value="3" required />
+                                <div class="invalid-feedback">Please enter duration (1-30 days).</div>
+                            </div>
+                        </div>
+                        <button type="submit" id="tripSubmitBtn" class="btn btn-danger w-100 py-2 mt-4 fw-semibold">
+                            <i class="fa-solid fa-paper-plane me-2"></i>Generate Travel Plan
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab 2: Nearby Explorer -->
+            <div class="tab-pane fade <%= initialLocation ? 'show active' : '' %>" id="nearby-content" role="tabpanel">
+                <div class="card shadow-sm border p-4">
+                    <h5 class="card-title mb-3 fw-bold"><i class="fa-solid fa-map-pin text-danger me-2"></i>Discover Attractions & Stays Nearby</h5>
+                    <form id="nearbyForm" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="locationInput" class="form-label">Enter City, Area, or Current Location</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-location-dot text-danger"></i></span>
+                                <input type="text" class="form-control" id="locationInput" value="<%= initialLocation %>" placeholder="e.g. Jaipur, Himachal Pradesh, Rome" required />
+                                <div class="invalid-feedback">Please provide a location.</div>
+                            </div>
+                        </div>
+                        <button type="submit" id="nearbySubmitBtn" class="btn btn-danger w-100 py-2 mt-3 fw-semibold">
+                            <i class="fa-solid fa-magnifying-glass-location me-2"></i>Find Nearby Places & Stays
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingState" class="card shadow-sm border p-5 mt-4 text-center d-none">
+            <div class="spinner-border text-danger mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="fw-semibold">Gemini Flash is preparing your travel guide...</h5>
+            <p class="text-muted small">Crafting day-wise routes, budget suggestions, and local recommendations.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="alert alert-danger mt-4 d-none" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i><span id="errorMessage">Something went wrong.</span>
+        </div>
+
+        <!-- Result Card -->
+        <div id="resultState" class="card shadow-sm border mt-4 d-none">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-clipboard-list text-danger me-2"></i>Your Personalized Plan</h5>
+                <div>
+                    <span id="aiBadge" class="badge bg-danger me-2">AI Plan</span>
+                    <button class="btn btn-sm btn-outline-secondary" id="copyBtn" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy me-1"></i>Copy
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-4" id="planContent" style="white-space: pre-wrap; line-height: 1.7;"></div>
+            <div class="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+                <small class="text-muted"><i class="fa-regular fa-lightbulb me-1"></i>Like this plan? Find places to stay on Wanderlust!</small>
+                <a href="/listings" class="btn btn-sm btn-danger">Browse Listings</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    const tripForm = document.getElementById("tripForm");
+    const nearbyForm = document.getElementById("nearbyForm");
+    const loadingState = document.getElementById("loadingState");
+    const errorState = document.getElementById("errorState");
+    const errorMessage = document.getElementById("errorMessage");
+    const resultState = document.getElementById("resultState");
+    const planContent = document.getElementById("planContent");
+    const aiBadge = document.getElementById("aiBadge");
+    const copyBtn = document.getElementById("copyBtn");
+
+    function showLoading() {
+        loadingState.classList.remove("d-none");
+        errorState.classList.add("d-none");
+        resultState.classList.add("d-none");
+    }
+
+    function showError(msg) {
+        loadingState.classList.add("d-none");
+        errorState.classList.remove("d-none");
+        resultState.classList.add("d-none");
+        errorMessage.innerText = msg;
+    }
+
+    // Simple markdown-to-HTML parser for clean formatted display
+    function formatMarkdown(text) {
+        if (!text) return "";
+        let html = text
+            // Escape HTML
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            // Headers
+            .replace(/^### (.*$)/gim, '<h5 class="fw-bold text-dark mt-3 mb-2">$1</h5>')
+            .replace(/^#### (.*$)/gim, '<h6 class="fw-bold text-danger mt-3 mb-1">$1</h6>')
+            // Bold
+            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+            // Horizontal rule
+            .replace(/^---$/gim, '<hr class="my-3 text-muted">')
+            // Bullet points
+            .replace(/^- (.*$)/gim, '<div class="ms-3 mb-1">&#8226; $1</div>');
+        return html;
+    }
+
+    function showResult(plan, isLive) {
+        loadingState.classList.add("d-none");
+        errorState.classList.add("d-none");
+        resultState.classList.remove("d-none");
+        planContent.innerHTML = formatMarkdown(plan);
+        aiBadge.innerText = isLive ? "Gemini Flash Live" : "Travel Plan";
+        aiBadge.className = isLive ? "badge bg-success me-2" : "badge bg-secondary me-2";
+        resultState.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    if (tripForm) {
+        tripForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!tripForm.checkValidity()) {
+                tripForm.classList.add("was-validated");
+                return;
+            }
+
+            const startLocation = document.getElementById("startLocation").value;
+            const destination = document.getElementById("destination").value;
+            const budget = document.getElementById("budget").value;
+            const days = document.getElementById("days").value;
+
+            showLoading();
+
+            try {
+                const res = await fetch("/assistant/plan", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ startLocation, destination, budget, days })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showResult(data.plan, data.isLive);
+                } else {
+                    showError(data.error || "Failed to generate plan.");
+                }
+            } catch (err) {
+                showError("Network error. Please try again.");
+            }
+        });
+    }
+
+    if (nearbyForm) {
+        nearbyForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!nearbyForm.checkValidity()) {
+                nearbyForm.classList.add("was-validated");
+                return;
+            }
+
+            const location = document.getElementById("locationInput").value;
+            showLoading();
+
+            try {
+                const res = await fetch("/assistant/nearby", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ location })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showResult(data.plan, data.isLive);
+                } else {
+                    showError(data.error || "Failed to fetch nearby places.");
+                }
+            } catch (err) {
+                showError("Network error. Please try again.");
+            }
+        });
+
+        // If page loaded with initial location, automatically trigger nearby lookup
+        const initialLoc = "<%= initialLocation %>";
+        if (initialLoc && initialLoc.trim().length > 0) {
+            nearbyForm.dispatchEvent(new Event("submit"));
+        }
+    }
+
+    if (copyBtn) {
+        copyBtn.addEventListener("click", () => {
+            const rawText = planContent.innerText;
+            navigator.clipboard.writeText(rawText).then(() => {
+                copyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fa-regular fa-copy me-1"></i>Copy';
+                }, 2000);
+            });
+        });
+    }
+})();
+</script>
